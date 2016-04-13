@@ -97,7 +97,8 @@ gulp.task('serve', ['styles', 'scripts', 'fonts'], () => {
     server: {
       baseDir: ['.tmp', 'app'],
       routes: {
-        '/bower_components': 'bower_components'
+        '/bower_components': 'bower_components',
+        '/other_components': 'other_components'
       }
     }
   });
@@ -133,7 +134,8 @@ gulp.task('serve:test', ['scripts'], () => {
       baseDir: 'test',
       routes: {
         '/scripts': '.tmp/scripts',
-        '/bower_components': 'bower_components'
+        '/bower_components': 'bower_components',
+        '/other_components': 'other_components'
       }
     }
   });
