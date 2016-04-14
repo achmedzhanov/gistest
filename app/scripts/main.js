@@ -25,9 +25,10 @@ console.log('\'Allo \'Allo!');
 		$.getJSON('/task1_example.geojson' /*'/task1_example_small.geojson'*/)
 			.then((data) => {
 				console.log( "Получены данные" );
-				console.log( "Фильтруем данные данные" );
+				console.log( "Фильтруем данные данные", new Date().toLocaleString());
+				data.features = data.features.slice(1,10000);
 				var filteredData = filterCoveredPolygons(data);
-				console.log( "Завершилась фильтрация" );
+				console.log( "Завершилась фильтрация", new Date().toLocaleString());
 				//var filteredData = data;
 
 				// добавить полигоны на карту
@@ -47,12 +48,12 @@ console.log('\'Allo \'Allo!');
 					// пвый полигон виден всегда
 					// второй может перекрываться первым и т.д.
 
-					var filtered = [];
-					for(var i=data.features.length-1; i>= 0; i--) {
+					let filtered = [];
+					for(let i=data.features.length-1; i>= 0; i--) {
 						let p = data.features[i];
 
-						var fIdx = filtered.length;
-						var covered = false;
+						let fIdx = filtered.length;
+						let covered = false;
 						while (fIdx--) {
 							if(PolygonAlgs.isCovered(p, filtered[fIdx])) {
 								covered = true;
@@ -64,6 +65,7 @@ console.log('\'Allo \'Allo!');
 							filtered.push(data.features[i]);
 						}
 					}
+					console.log('data.length=' + data.features.length + ' filtered.length=' + filtered.length)
 					return filtered;
 			}
 
