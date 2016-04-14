@@ -38,51 +38,80 @@ var PolygonAlgs = {};
     return {left: left, right: right, top: top, bottom: bottom};
   }
 
-  function isCoveredBox(condidateBox, destinationBox) {
-    return condidateBox.left >= destinationBox.left
-    &&  condidateBox.right <= destinationBox.right
-    && condidateBox.bottom >= destinationBox.bottom
-    &&  condidateBox.top <= destinationBox.top;
+  function isCoveredBox(candidateBox, destinationBox) {
+    return candidateBox.left >= destinationBox.left
+    &&  candidateBox.right <= destinationBox.right
+    && candidateBox.bottom >= destinationBox.bottom
+    &&  candidateBox.top <= destinationBox.top;
   }
 
-  function isCovered(condidate, destination) {
-      let cPoints = condidate.geometry.coordinates[0];
+
+  function filterCoveredPolygons(features) {
+      // для начала простой алгоритм
+      // проверям накрывание только одним полигоном
+      // посколькку полигоны выпуклые, то чтобы проверить вхождение A в B досаточно проверить что все точки A находятся внутри полигона B
+
+      // идем в обратном порядке
+      // пвый полигон виден всегда
+      // второй может перекрываться первым и т.д.
+
+      let filtered = [];
+      for(let i=features.length-1; i>= 0; i--) {
+        let target = {
+          feature: features[i],
+          boundingBox: getBoundingBox(features[i].geometry.coordinates[0])
+        };
+
+        let fIdx = filtered.length;
+        let covered = false;
+        while (fIdx--) {
+          if(_isCovered(target, filtered[fIdx])) {
+            covered = true;
+            break;
+          }
+        }
+
+        if(!covered) {
+          filtered.push(target);
+        }
+      }
+      console.log('data.length=' + features.length + ' filtered.length=' + filtered.length)
+      return filtered.map((v) => v.feature);
+  }
+
+  function _isCovered(candidate, destination) {
+      let cPoints = candidate.feature.geometry.coordinates[0];
 
       // быстрая проверка по включению обрамляющего прямоугольника
-      if(destination.geometry.cached_boundingBox == undefined) {
-        destination.geometry.cached_cached_boundingBox = getBoundingBox(destination.geometry.coordinates[0]);
+      if(destination.boundingBox == undefined) {
+        throw "assert: expected boundingBox";
       }
-      condidate.geometry.cached_cached_boundingBox = getBoundingBox(condidate.geometry.coordinates[0]);
-      if(!isCoveredBox(condidate.geometry.cached_cached_boundingBox, destination.geometry.cached_cached_boundingBox)) {
+      if(candidate.boundingBox == undefined) {
+        throw "assert: expected boundingBox";
+      }
+      if(!isCoveredBox(candidate.boundingBox, destination.boundingBox)) {
         return false;
       }
 
-      // TODO кешировать не должно оказывать побочный эффект на входных данных!
-
       //кэшируем массив координат
-      if(destination.geometry.cached_cArray == undefined) {
-        destination.geometry.cached_cArray = coordinatesToArray(destination.geometry.coordinates[0]);
+      if(destination.cArray == undefined) {
+        destination.cArray = coordinatesToArray(destination.feature.geometry.coordinates[0]);
       }
       //кэшируем признак выпуклости
-      if(destination.geometry.cached_isConvex == undefined) {
-        destination.geometry.cached_isConvex = PolyK.IsConvex(destination.geometry.cached_cArray)
-        || PolyK.IsConvex(coordinatesToArray(destination.geometry.coordinates[0].reverse())) ;
+      if(destination.isConvex == undefined) {
+        destination.isConvex = PolyK.IsConvex(destination.cArray)
+        || PolyK.IsConvex(coordinatesToArray(destination.feature.geometry.coordinates[0].reverse())) ;
       }
-
-
-      let destinationIsCovex = destination.geometry.cached_isConvex;
-
-      let dPoints = destination.geometry.cached_cArray;
 
       let covered = true;
       for(let i = 0; i < cPoints.length; i++) {
         // если точка не попадает в проверяемый полигон то false
-        if(!PolyK.ContainsPoint(dPoints, cPoints[i][0], cPoints[i][1])) {
+        if(!PolyK.ContainsPoint(destination.cArray, cPoints[i][0], cPoints[i][1])) {
           return false;
         }
       }
       // если проверяемый полигон выпуклый, то достаточно проверить только вхождения точек
-      if(destinationIsCovex) {
+      if(destination.isConvex) {
         return true;
       }
       // иначе проверяем пересечение всех ребер
@@ -91,5 +120,12 @@ var PolygonAlgs = {};
       return false;
   }
 
+  function isCovered(candidate, destination) {
+    return _isCovered({feature: candidate, boundingBox: getBoundingBox(candidate.geometry.coordinates[0])},
+                      {feature: destination, boundingBox: getBoundingBox(destination.geometry.coordinates[0])});
+  }
+
   PolygonAlgs.isCovered = isCovered;
+  PolygonAlgs.filterCoveredPolygons = filterCoveredPolygons;
+
 })(PolygonAlgs, PolyK);

@@ -26,8 +26,7 @@ console.log('\'Allo \'Allo!');
 			.then((data) => {
 				console.log( "Получены данные" );
 				console.log( "Фильтруем данные данные", new Date().toLocaleString());
-				data.features = data.features.slice(1,10000);
-				var filteredData = filterCoveredPolygons(data);
+				var filteredData =PolygonAlgs.filterCoveredPolygons(data.features.slice(1,10000));
 				console.log( "Завершилась фильтрация", new Date().toLocaleString());
 				//var filteredData = data;
 
@@ -39,34 +38,5 @@ console.log('\'Allo \'Allo!');
     		console.log( "error ", e);
   		});
 
-			function filterCoveredPolygons(data) {
-										// для начала простой алгоритм
-					// проверям накрывание только одним полигоном
-					// посколькку полигоны выпуклые, то чтобы проверить вхождение A в B досаточно проверить что все точки A находятся внутри полигона B
-
-					// идем в обратном порядке
-					// пвый полигон виден всегда
-					// второй может перекрываться первым и т.д.
-
-					let filtered = [];
-					for(let i=data.features.length-1; i>= 0; i--) {
-						let p = data.features[i];
-
-						let fIdx = filtered.length;
-						let covered = false;
-						while (fIdx--) {
-							if(PolygonAlgs.isCovered(p, filtered[fIdx])) {
-								covered = true;
-								break;
-							}
-						}
-
-						if(!covered) {
-							filtered.push(data.features[i]);
-						}
-					}
-					console.log('data.length=' + data.features.length + ' filtered.length=' + filtered.length)
-					return filtered;
-			}
 
 })(L, $, PolygonAlgs, console);
