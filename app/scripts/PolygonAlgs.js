@@ -12,7 +12,7 @@ var PolygonAlgs = {};
     // некогжа выснять порядок вершин - по часовой стрелке или притив часвой
     // поэтому допускаем вольность и ...
     // предполагаем что вершины полигоа расположены по часовой стрелке
-    coordinates = coordinates.reverse();
+    coordinates = coordinates.slice(0).reverse();
 
     let i = ret.length/2;
     while(i--) {
@@ -140,7 +140,7 @@ var PolygonAlgs = {};
       //кэшируем признак выпуклости
       if(destination.isConvex == undefined) {
         destination.isConvex = PolyK.IsConvex(destination.cArray)
-        || PolyK.IsConvex(coordinatesToArray(destination.feature.geometry.coordinates[0].reverse())) ;
+        || PolyK.IsConvex(coordinatesToArray(destination.feature.geometry.coordinates[0].slice(0).reverse())) ;
       }
 
       let covered = true;
