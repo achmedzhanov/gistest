@@ -1,6 +1,6 @@
 var PolygonAlgs = {};
 
-(function (PolygonAlgs, PolyK) {
+(function (PolygonAlgs, PolyK, rbush) {
   "use strict";
 
   function coordinatesToArray(coordinates) {
@@ -45,6 +45,30 @@ var PolygonAlgs = {};
     &&  candidateBox.top <= destinationBox.top;
   }
 
+  function getBoundingBoxArray(coordinates) {
+    let left = coordinates[0][0];
+    let right = left;
+    let top = coordinates[0][1];
+    let bottom = top;
+    let i = coordinates.length;
+    while(i-- > 0) {
+      left = Math.min(left, coordinates[i][0]);
+      right = Math.max(right, coordinates[i][0]);
+      bottom = Math.min(bottom, coordinates[i][1]);
+      top = Math.max(top, coordinates[i][1]);
+    }
+
+    return [left, bottom, right, top];
+  }
+
+
+  function isCoveredBoxArray(candidateBox, destinationBox) {
+    return candidateBox[0] >= destinationBox[0]
+    &&  candidateBox[2] <= destinationBox[2]
+    && candidateBox[3] <= destinationBox[3]
+    &&  candidateBox[1] >= destinationBox[1];
+  }
+
 
   function filterCoveredPolygons(features) {
       // для начала простой алгоритм
@@ -55,43 +79,59 @@ var PolygonAlgs = {};
       // пвый полигон виден всегда
       // второй может перекрываться первым и т.д.
 
-      let filtered = [];
-      for(let i=features.length-1; i>= 0; i--) {
-        let target = {
-          feature: features[i],
-          boundingBox: getBoundingBox(features[i].geometry.coordinates[0])
-        };
 
-        let fIdx = filtered.length;
-        let covered = false;
-        while (fIdx--) {
-          if(_isCovered(target, filtered[fIdx])) {
-            covered = true;
-            break;
+      let ractangles = features.map((f, i) => {
+        var a = getBoundingBoxArray(features[i].geometry.coordinates[0]);
+        a.push({
+          feature: f,
+          cArray: undefined,
+          isConvex: undefined,
+          index: i});
+        return a;
+      });
+
+
+      let tree = rbush(4);
+      tree.load(ractangles);
+
+      let filtered = [];
+      let current, intersected, j,covered;
+      for(let i=ractangles.length-1; i>= 0; i--) {
+        covered = false;
+        current = ractangles[i];
+        intersected = tree.search(current);
+        //console.log('intersected.length ' + intersected.length);
+        for(j = 0; j < intersected.length; j++) {
+          if(intersected[j][4].index <= current[4].index) {
+              continue;
+              //console.log('index continue');
+          }
+          if(!isCoveredBoxArray(current, intersected[j])) {
+              continue;
+              //console.log('isCoveredBoxArray continue');
+          }
+          if(_isCovered(current[4], intersected[j][4])) {
+              //console.log('_isCovered break');
+              covered = true;
+              break;
           }
         }
 
         if(!covered) {
-          filtered.push(target);
+          filtered.push(current[4]);
         }
       }
       console.log('data.length=' + features.length + ' filtered.length=' + filtered.length)
-      return filtered.map((v) => v.feature);
+      return filtered.map(v => v.feature);
   }
 
   function _isCovered(candidate, destination) {
       let cPoints = candidate.feature.geometry.coordinates[0];
 
       // быстрая проверка по включению обрамляющего прямоугольника
-      if(destination.boundingBox == undefined) {
-        throw "assert: expected boundingBox";
-      }
-      if(candidate.boundingBox == undefined) {
-        throw "assert: expected boundingBox";
-      }
-      if(!isCoveredBox(candidate.boundingBox, destination.boundingBox)) {
-        return false;
-      }
+      // if(!isCoveredBox(candidate.boundingBox, destination.boundingBox)) {
+      //   return false;
+      // }
 
       //кэшируем массив координат
       if(destination.cArray == undefined) {
@@ -128,4 +168,4 @@ var PolygonAlgs = {};
   PolygonAlgs.isCovered = isCovered;
   PolygonAlgs.filterCoveredPolygons = filterCoveredPolygons;
 
-})(PolygonAlgs, PolyK);
+})(PolygonAlgs, PolyK, rbush);
