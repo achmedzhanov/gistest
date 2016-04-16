@@ -19,19 +19,63 @@
 			map.invalidateSize();
 		}).trigger("resize");
 
+		// ручно ввод JSON
+		$(function() {
+			$('.input-json').magnificPopup({
+					type: 'inline',
+					preloader: false,
+					focus: '.input-json-form__jeojson',
+
+					callbacks: {
+						beforeOpen: function() {
+							// TODO put last value
+						}
+					}
+				});
+
+				$('.input-json-form__ok').click(function() {
+					var text = $('.input-json-form__jeojson').val();
+					var data;
+					try {
+						data = JSON.parse(text);
+					} catch(e) {
+						alert('Неверный формат JSON. Ошибки: ' + e);
+						return false;
+					}
+
+					// закрываем попап
+					$.magnificPopup.instance.close();
+
+					// показвываем данные на карте
+					showJson(data);
+					return false;
+				});
+		});
+
+		function showJson(data) {
+			// очистить слои
+			for(i in map._layers) {
+        if(map._layers[i]._path != undefined) {
+            try {
+                map.removeLayer(map._layers[i]);
+            }
+            catch(e) {
+                console.log("problem with " + e + map._layers[i]);
+            }
+        }
+    	}
+			// добавить полигоны на карту
+			L.geoJson(data).addTo(map); // работает на удивление довольно быстро ...
+		}
 
 		// загрука данных
 		$.getJSON('/task1_example.geojson' /*'/task1_example_small.geojson'*/)
 			.then((data) => {
 				console.log( "Получены данные" );
 				console.log( "Фильтруем данные данные", new Date().toLocaleString());
-				var filteredData =PolygonAlgs.filterCoveredPolygons(data.features.slice(1,50000));
+				var filteredData =PolygonAlgs.filterCoveredPolygons(data.features.slice(1, 100/*50000*/));
 				console.log( "Завершилась фильтрация", new Date().toLocaleString());
-				//var filteredData = data;
-
-				// добавить полигоны на карту
-				// работает на удивление довольно быстро ...
-				L.geoJson(filteredData).addTo(map);
+				showJson(filteredData);
 			})
 			.fail((e) => {
     		console.log( "error ", e);

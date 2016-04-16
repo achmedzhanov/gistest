@@ -12,6 +12,9 @@
     <!-- build:css styles/vendor.css -->
     <!-- bower:css -->
     <link rel="stylesheet" href="/bower_components/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="/bower_components/magnific-popup/dist/magnific-popup.css" />
+    <link rel="stylesheet" href="/bower_components/pure/pure.css" />
+    <link rel="stylesheet" href="/bower_components/font-awesome/css/font-awesome.css" />
     <!-- endbower -->
     <!-- endbuild -->
 
@@ -28,14 +31,32 @@
       <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
     <![endif]-->
 
+    <div class="toolbar">
+      <div class="toolbar__item">
+        <a href="#input-json-form" class="input-json pure-button" title="Ввести вручную JeoJSON" >
+          <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+           GeoJSON
+        </a>
+      </div>
+      <div style="clear: both;"></div>
+    </div>
+
     <div id="map" style="width: 600px; height: 400px"></div>
 
+    <form id="input-json-form" class="input-json-form pure-form mfp-hide">
+    	<fieldset class="pure-group" >
+        <legend>Введите GeoJSON</legend>
+    		<textarea name="jeojson" class="input-json-form__jeojson pure-input-1" ></textarea>
+        <button type="button" class="input-json-form__ok pure-button pure-button-primary pure-input-1">Показать на карте</button>
+    	</fieldset>
+    </form>
 
     <!-- build:js scripts/vendor.js -->
     <!-- bower:js -->
     <script src="/bower_components/jquery/dist/jquery.js"></script>
     <script src="/bower_components/leaflet/dist/leaflet-src.js"></script>
     <script src="/bower_components/rbush/rbush.js"></script>
+    <script src="/bower_components/magnific-popup/dist/jquery.magnific-popup.js"></script>
     <!-- endbower -->
     <!-- endbuild -->
 

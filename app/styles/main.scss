@@ -1,4 +1,5 @@
 // bower:scss
+@import "bower_components/font-awesome/scss/font-awesome.scss";
 // endbower
 
 body {
@@ -22,4 +23,33 @@ html, body {
   background: #ccc;
   color: #000;
   padding: 0.2em 0;
+}
+
+.toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  user-select: none;
+  user-select: none;
+  margin-top: 17px;
+  &__item {
+    position: relative;
+    z-index: 500;
+    float: right;
+    display: block;
+    padding-right: 17px;
+  }
+}
+
+.input-json-form {
+  background: #FFF;
+  padding: 30px 40px 40px;
+  max-width: 500px;
+  text-align: left;
+  margin: 10px auto;
+  position: relative;
+  &__jeojson {
+    height: 400px;
+  }
 }
