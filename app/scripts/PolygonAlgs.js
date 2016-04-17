@@ -86,6 +86,7 @@ var PolygonAlgs = {};
           feature: f,
           cArray: undefined,
           isConvex: undefined,
+          covered: false,
           index: i});
         return a;
       });
@@ -97,19 +98,24 @@ var PolygonAlgs = {};
       let filtered = [];
       let current, intersected, j,covered;
       for(let i=ractangles.length-1; i>= 0; i--) {
-        covered = false;
         current = ractangles[i];
+        covered = false;
         intersected = tree.search(current);
         //console.log('intersected.length ' + intersected.length);
         for(j = 0; j < intersected.length; j++) {
-          if(intersected[j][4].index <= current[4].index) {
+          if(intersected[j][4].index <= current[4].index ||
+              intersected[j][4].covered) {
               continue;
               //console.log('index continue');
           }
+          //  TODO можно еще проверить про прямоугольник уже отсечен!
           if(!isCoveredBoxArray(current, intersected[j])) {
               continue;
               //console.log('isCoveredBoxArray continue');
           }
+
+          // TODO здесь надо сделать последовательное отсечение!
+
           if(_isCovered(current[4], intersected[j][4])) {
               //console.log('_isCovered break');
               covered = true;
@@ -119,6 +125,8 @@ var PolygonAlgs = {};
 
         if(!covered) {
           filtered.push(current[4]);
+        } else {
+          current.covered = true;
         }
       }
       console.log('data.length=' + features.length + ' filtered.length=' + filtered.length)
