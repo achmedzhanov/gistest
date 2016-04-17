@@ -1,6 +1,6 @@
 var PolygonAlgs = {};
 
-(function (PolygonAlgs, PolyK, rbush) {
+(function (PolygonAlgs, PolyK, rbush, ClipperLib) {
   "use strict";
 
   function coordinatesToArray(coordinates) {
@@ -96,19 +96,22 @@ var PolygonAlgs = {};
       tree.load(ractangles);
 
       let filtered = [];
-      let current, intersected, j,covered;
+      let current, intersected, j,covered, filteredIntersected;
       for(let i=ractangles.length-1; i>= 0; i--) {
         current = ractangles[i];
         covered = false;
         intersected = tree.search(current);
         //console.log('intersected.length ' + intersected.length);
+        filteredIntersected = [];
         for(j = 0; j < intersected.length; j++) {
           if(intersected[j][4].index <= current[4].index ||
               intersected[j][4].covered) {
               continue;
               //console.log('index continue');
           }
-          //  TODO можно еще проверить про прямоугольник уже отсечен!
+
+          filteredIntersected.push(intersected[j]);
+
           if(!isCoveredBoxArray(current, intersected[j])) {
               continue;
               //console.log('isCoveredBoxArray continue');
@@ -123,8 +126,22 @@ var PolygonAlgs = {};
           }
         }
 
+        if(filteredIntersected.length > 1 && !covered) {
+          //console.log('MULTI COVERED ' + filteredIntersected.length);
+          /*if(filteredIntersected.length > 500) {
+            console.log('mega intersection');
+            console.log(JSON.stringify(current[4].feature));
+            console.log(JSON.stringify(filteredIntersected.map((v) => v[4].feature)));
+          }*/
+
+          if(_isCoveredMulti(current, filteredIntersected)) {
+            //console.log('multi covered ' + true)
+            covered = true;
+          }
+        }
+
         if(!covered) {
-          filtered.push(current[4]);
+            filtered.push(current[4]);
         } else {
           current.covered = true;
         }
@@ -133,7 +150,83 @@ var PolygonAlgs = {};
       return filtered.map(v => v.feature);
   }
 
+  function _isCoveredMulti (candidate, destinations) {
+    //console.log('_isCoveredMulti');
+    //var cpr = new ClipperLib.Clipper();
+    //ClipperLib.
+    // let c = candidate[4].feature.geometry.coordinates[0].map((v) => ({X: v[0], Y: v[1]}));
+    // let d = destination[0][4].feature.geometry.coordinates[0].map((v) => ({X: v[0], Y: v[1]}));
+    // let r = ClipperLib.Clipper.MinkowskiDiff(c, d);
+
+    // var subj = [[{X:10,Y:10},{X:110,Y:10},{X:110,Y:110},{X:10,Y:110}],
+    //                 [{X:20,Y:20},{X:20,Y:100},{X:100,Y:100},{X:100,Y:20}]];
+    // var clips = [[{X:50,Y:50},{X:150,Y:50},{X:150,Y:150},{X:50,Y:150}],
+    //                 [{X:60,Y:60},{X:60,Y:140},{X:140,Y:140},{X:140,Y:60}]];
+
+
+
+    //  let subj = candidate[4].feature.geometry.coordinates[0].map((v) => ({X: v[0], Y: v[1]}));
+    //  let clips = destinations.map((destination) => destination[4].feature.geometry.coordinates[0].map((v) => ({X: v[0], Y: v[1]})));
+    //  console.log('clips' , clips);
+     //
+    //  var union = new ClipperLib.Paths();
+    //  var c = new ClipperLib.Clipper();
+    //  c.AddPaths(clips,  ClipperLib.PolyType.ptClip, true);
+    //  c.Execute(ClipperLib.ClipType.ctUnion, union);
+    //  console.log('union' , union);
+    //  c.Clear();
+     //
+    //  var intersection = new ClipperLib.Paths();
+    //  console.log('subj' , subj);
+    //  c.AddPath(subj,  ClipperLib.PolyType.ptSubject, true);
+    //  c.AddPaths(union,  ClipperLib.PolyType.ptClip, true /* true ???? */);
+    //  c.Execute(ClipperLib.ClipType.ctIntersection, intersection);
+    //  console.log('intersection' , intersection);
+
+
+
+
+     //
+    //  let subj = candidate[4].feature.geometry.coordinates[0].map((v) => ({X: v[0], Y: v[1]}));
+    //  let clips = destinations.map((destination) => destination[4].feature.geometry.coordinates[0].map((v) => ({X: v[0], Y: v[1]})));
+    //  console.log('clips' , clips);
+     //
+    //  var solution = new ClipperLib.Paths();
+    //  var c = new ClipperLib.Clipper();
+    //  c.AddPath(subj,  ClipperLib.PolyType.ptSubject, true);
+    //  c.AddPaths(clips,  ClipperLib.PolyType.ptClip, true);
+    //  c.Execute(ClipperLib.ClipType.ctDifference, solution);
+    //  console.log('solution' , solution);
+
+    let scale = (v) => ({X: v[0] * 100 /* 65536 */ , Y: v[1] * 100 /* 65536 */ });
+
+     let subj = candidate[4].feature.geometry.coordinates[0].map(scale);
+     let clips = destinations.map((destination) => destination[4].feature.geometry.coordinates[0].map(scale));
+     //console.log('clips' , clips);
+
+     var union = new ClipperLib.Paths();
+     var c = new ClipperLib.Clipper();
+    //  c.AddPath(clips[0],  ClipperLib.PolyType.ptSubject, true);
+    //  c.AddPath(clips[1],  ClipperLib.PolyType.ptClip, true);
+     c.AddPath(clips[0],  ClipperLib.PolyType.ptSubject, true);
+     c.AddPaths(clips.slice(1),  ClipperLib.PolyType.ptClip, true);
+     c.Execute(ClipperLib.ClipType.ctUnion, union, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+     //console.log('union' , union);
+     //c.Clear();
+     c = new ClipperLib.Clipper();
+
+     var difference = new ClipperLib.Paths();
+     //console.log('subj' , subj);
+     c.AddPath(subj,  ClipperLib.PolyType.ptSubject, true);
+     c.AddPaths(union,  ClipperLib.PolyType.ptClip, true /* true ???? */);
+     c.Execute(ClipperLib.ClipType.ctDifference, difference);
+     //console.log('difference' , difference);
+
+    return difference.length == 0;
+  }
+
   function _isCovered(candidate, destination) {
+      //console.log('_isCovered');
       let cPoints = candidate.feature.geometry.coordinates[0];
 
       // быстрая проверка по включению обрамляющего прямоугольника
@@ -176,4 +269,4 @@ var PolygonAlgs = {};
   PolygonAlgs.isCovered = isCovered;
   PolygonAlgs.filterCoveredPolygons = filterCoveredPolygons;
 
-})(PolygonAlgs, PolyK, rbush);
+})(PolygonAlgs, PolyK, rbush, ClipperLib);

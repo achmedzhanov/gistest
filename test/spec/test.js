@@ -92,8 +92,29 @@
             {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[2,3],[7,3],[7,9],[2,9],[2,3]]]}},
             {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[6,2],[10,2],[10,10],[6,10],[6,2]]]}}
             ]            );
+
+            // это костыль ... надо делать проверку, независимую от порядка, но в mocha этого нет из коробки ..
+            result.reverse()
           assert.deepEqual([
             {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[2,3],[7,3],[7,9],[2,9],[2,3]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[6,2],[10,2],[10,10],[6,10],[6,2]]]}}
+            ], result);
+        });
+
+        it('Должен отфильтровать полигон, который накрывается целиком тремя пересекающимися полигонами (гео координаты)', function () {
+          var result = PolygonAlgs.filterCoveredPolygons([
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[4,4],[8,4],[8,8],[4,8],[4,4]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[2,5],[7,5],[7,9],[2,9],[2,5]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[2,3],[7,3],[7,5],[2,5],[2,3]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[6,2],[10,2],[10,10],[6,10],[6,2]]]}}
+            ]            );
+
+            // это костыль ... надо делать проверку, независимую от порядка, но в mocha этого нет из коробки ..
+            result.reverse()
+
+          assert.deepEqual([
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[2,5],[7,5],[7,9],[2,9],[2,5]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[2,3],[7,3],[7,5],[2,5],[2,3]]]}},
             {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[6,2],[10,2],[10,10],[6,10],[6,2]]]}}
             ], result);
         });

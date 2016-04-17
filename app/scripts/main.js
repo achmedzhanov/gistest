@@ -72,8 +72,8 @@
 		$.getJSON('/task1_example.geojson' /*'/task1_example_small.geojson'*/)
 			.then((data) => {
 				console.log( "Получены данные" );
-				console.log( "Фильтруем данные данные", new Date().toLocaleString());
-				var filteredData =PolygonAlgs.filterCoveredPolygons(data.features.slice(1, /*100*/ 50000));
+				console.log( "Фильтруем данные данные", new Date().toLocaleString()); // TODO заюзать полифил perf.now
+				var filteredData =PolygonAlgs.filterCoveredPolygons(data.features.slice(1, 5000 /*50000*/));
 				console.log( "Завершилась фильтрация", new Date().toLocaleString());
 				showJson(filteredData);
 			})
