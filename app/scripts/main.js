@@ -73,7 +73,7 @@
 			.then((data) => {
 				console.log( "Получены данные" );
 				console.log( "Фильтруем данные данные", new Date().toLocaleString()); // TODO заюзать полифил perf.now
-				var filteredData =PolygonAlgs.filterCoveredPolygons(data.features.slice(1, 10000 /*50000*/));
+				var filteredData =PolygonAlgs.filterCoveredPolygons(data.features.slice(1, 5000 /*50000*/));
 				console.log( "Завершилась фильтрация", new Date().toLocaleString());
 				showJson(filteredData);
 			})

@@ -10,7 +10,7 @@
 
   describe('PolygonAlgs', function () {
       describe('#filterCoveredPolygons', function () {
-
+        this.timeout(15000);
         var datas = [
           [window.data100, '100' ],
           [window.data1000, '1000' ],
@@ -18,6 +18,7 @@
           [window.data5000, '5000' ]
         ];
         for (let d of datas) {
+          if(!d) continue;
           let [data, description] = d;
           it(description, function() {
             run(data, description);

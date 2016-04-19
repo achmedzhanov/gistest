@@ -58,9 +58,24 @@ var PolygonAlgs = {};
             top = Math.max(top, coordinates[i][1]);
         }
 
-        return [left, bottom, right, top];
+        return [left*clipperFactor, bottom*clipperFactor, right*clipperFactor, top*clipperFactor];
     }
 
+    function getBoundingBoxArrayFromClipperPath(coordinates) {
+      let left = coordinates[0].X;
+      let right = left;
+      let top = coordinates[0].Y;
+      let bottom = top;
+      let i = coordinates.length;
+      while (i-- > 0) {
+          left = Math.min(left, coordinates[i].X);
+          right = Math.max(right, coordinates[i].X);
+          bottom = Math.min(bottom, coordinates[i].Y);
+          top = Math.max(top, coordinates[i].Y);
+      }
+
+      return [left, bottom, right, top];
+    }
 
     function isCoveredBoxArray(candidateBox, destinationBox) {
         return candidateBox[0] >= destinationBox[0] && candidateBox[2] <= destinationBox[2] && candidateBox[3] <= destinationBox[3] && candidateBox[1] >= destinationBox[1];
@@ -69,6 +84,37 @@ var PolygonAlgs = {};
     function isPointInRect(x, y, a) {
         return x >= a[0] && y >= a[1] && x <= a[2] && y <= a[3];
     }
+
+    function isEqualPaths(paths1, paths2) {
+      if(paths1.length != paths2.length) {
+          return false;
+      }
+      //if(ClipperLib.Clipper.Area())
+      let i = paths1.length;
+      while(i--) {
+        if(paths1[i].length != paths2[i].length) {
+            return false;
+        }
+        let j = paths1[i].length;
+        while(j--) {
+          let k = paths1[i].length;
+          let found = false;
+          while(k--) {
+            if(paths1[i][j].X == paths2[i][k].X
+            && paths1[i][j].Y == paths2[i][k].Y) {
+                found = true;
+                break;
+            }
+          }
+          if(!found) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    const clipperFactor = 1;
 
     function filterCoveredPolygons(features) {
         // для начала простой алгоритм
@@ -79,6 +125,7 @@ var PolygonAlgs = {};
         // пвый полигон виден всегда
         // второй может перекрываться первым и т.д.
 
+        // TODO:perf огрубить точность 3 знака после запятой!
 
         let ractangles = features.map((f, i) => {
             var a = getBoundingBoxArray(features[i].geometry.coordinates[0]);
@@ -87,7 +134,8 @@ var PolygonAlgs = {};
                 cArray: undefined,
                 isConvex: undefined,
                 covered: false,
-                index: i
+                index: i,
+                clipperPath: toClipperPath(features[i].geometry.coordinates[0])
             });
             return a;
         });
@@ -98,6 +146,9 @@ var PolygonAlgs = {};
 
         let filtered = [];
         let current, intersected, j, covered, filteredIntersected;
+
+        //let subj = null, clips = null, union = null, clipper = new ClipperLib.Clipper();
+        let clipper = new ClipperLib.Clipper();
         for (let i = ractangles.length - 1; i >= 0; i--) {
             current = ractangles[i];
             covered = false;
@@ -111,33 +162,86 @@ var PolygonAlgs = {};
                     //console.log('index continue');
                 }
 
-                filteredIntersected.push(intersected[j]);
+                let candidate = current;
+                let currentIntersected = intersected[j][4];
+                let difference = new ClipperLib.Paths();
+                clipper.Clear();
+                clipper.AddPath(current[4].clipperPath,  ClipperLib.PolyType.ptSubject, true);
+                clipper.AddPath(currentIntersected.clipperPath,  ClipperLib.PolyType.ptClip, true);
+                clipper.Execute(ClipperLib.ClipType.ctDifference, difference, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+                //console.log('difference', difference);
 
-                if (!isCoveredBoxArray(current, intersected[j])) {
-                    continue;
-                    //console.log('isCoveredBoxArray continue');
+                // если накрывает целиком, то останавливаем цикл
+                if(difference.length == 0) {
+                  //-console.log('full covered break * feature:' + currentIntersected.feature);
+                  covered = true;
+                  break;
                 }
+                //console.log('intersection[0]', difference[0]);
+                //console.log('candidate[4].clipperPath', candidate[4].clipperPath);
 
-                // TODO здесь надо сделать последовательное отсечение!
-
-                if (_isCovered(current[4], intersected[j][4])) {
-                    //console.log('_isCovered break');
-                    covered = true;
-                    break;
+                // если не накрывает, но пересекает, то добааляем в список на объединение
+                if(!isEqualPaths(difference, [candidate[4].clipperPath])) {
+                  //-console.log('partialy covered');
+                  filteredIntersected.push(intersected[j]);
+                } else {
+                  //-console.log('not intersected');
                 }
             }
 
-            if (filteredIntersected.length > 1 && !covered) {
-                //console.log('MULTI COVERED ' + filteredIntersected.length);
-                /*if(filteredIntersected.length > 500) {
-                  console.log('mega intersection');
-                  console.log(JSON.stringify(current[4].feature));
-                  console.log(JSON.stringify(filteredIntersected.map((v) => v[4].feature)));
-                }*/
+            // если есть перечения
+            if(!covered &&  filteredIntersected.length > 0 ) {
+                // если больше 1, то проверим покрытие через объединение
+                clipper.Clear();
+                clipper.AddPath(current[4].clipperPath,  ClipperLib.PolyType.ptSubject, true);
+                clipper.AddPaths(filteredIntersected.map((v) => v[4].clipperPath),  ClipperLib.PolyType.ptClip, true);
+                let difference = new ClipperLib.Paths();
+                clipper.Execute(ClipperLib.ClipType.ctDifference, difference, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+                // если накрыто то устанавливаем флаг
+                if(difference.length == 0) {
+                  //-console.log('union covered break * ' + filteredIntersected.length);
+                  covered = true;
+                } else {
+                    // иначе делаем объединение и перестраиваем дерево
+                    //-console.log('change tree *');
+                    //-console.log('tree size ' + tree.all().length);
+                    let union = new ClipperLib.Paths();
+                    clipper.Execute(ClipperLib.ClipType.ctUnion, union, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+                    if(union.length == 1) {
+                        // удаляем полигоны входящие в объединение ...
+                        tree.remove(current);
+                        for(let k = 0; k < filteredIntersected.length; k++) {
+                            tree.remove(filteredIntersected[k]);
+                        }
 
-                if (_isCoveredMulti(current, filteredIntersected)) {
-                    //console.log('multi covered ' + true)
-                    covered = true;
+                        //-console.log('union attached ' + filteredIntersected.length + ' ' + filteredIntersected.length);
+
+                        if(ClipperLib.Clipper.Orientation(union[0])) {
+                            //-console.log('reverse path');
+                            union[0].reverse();
+                        }
+
+                        // вставляем объединение
+                        let newItem = getBoundingBoxArrayFromClipperPath(union[0]);
+                        newItem.push({
+                            feature: null,
+                            cArray: undefined,
+                            isConvex: false,
+                            covered: false,
+                            index: current[4].index,
+                            clipperPath: union[0]
+                        });
+                        tree.insert(newItem);
+                        //-console.log('tree size ' + tree.all().length);
+                    } else {
+                        console.log('объединение пересекающихся полигонов дало несколько контуров ..' /*, union*/);
+                        console.log('subj', JSON.stringify(pathToGeo(current[4].clipperPath)));
+                        console.log('clip', JSON.stringify(pathToGeo(filteredIntersected.map((v) => v[4].clipperPath))));
+                        console.log('filteredIntersected ' + filteredIntersected.length)
+                        //console.log('union', JSON.stringify(pathToGeo(union)));
+                        console.log('union length', union.length);
+                        //console.log('difference', JSON.stringify(pathToGeo(difference)));
+                    }
                 }
             }
 
@@ -151,57 +255,31 @@ var PolygonAlgs = {};
         return filtered.map(v => v.feature);
     }
 
+    function pathToGeo(path) {
+      return path.map((v) => {
+        if(Array.isArray(v))
+          return pathToGeo(v);
+        return [v.X,v.Y];
+      });
+    }
+
     function toClipperPath(coordinates) {
         let result = new Array((coordinates[0][0] == coordinates[coordinates.length - 1][0] && coordinates[0][1] == coordinates[coordinates.length - 1][1]) ? coordinates.length - 1 : coordinates.length);
         let i = result.length;
         while (i--) {
           // если приобразовать к целому числу, то получим прирост около 20%
           result[i] = {
-                X: coordinates[i][0] * 100 /* 65536 */ ,
-                Y: coordinates[i][1] * 100 /* 65536 */
+                X: coordinates[i][0] * clipperFactor /* 65536 */ ,
+                Y: coordinates[i][1] * clipperFactor /* 65536 */
             }
+        }
+        if(ClipperLib.Clipper.Orientation(result)) {
+            console.log('reverse path');
+            result.reverse();
         }
         return result;
     }
 
-    function _isCoveredMulti(candidate, destinations) {
-        //console.log('_isCoveredMulti');
-
-        let subj = toClipperPath(candidate[4].feature.geometry.coordinates[0]);
-        let clips = destinations.map((destination) => toClipperPath(destination[4].feature.geometry.coordinates[0]));
-        var union = new ClipperLib.Paths();
-        var c = new ClipperLib.Clipper();
-
-        c.AddPath(clips[0],  ClipperLib.PolyType.ptSubject, true);
-        c.AddPaths(clips.slice(1),  ClipperLib.PolyType.ptClip, true);
-        c.Execute(ClipperLib.ClipType.ctUnion, union, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-
-        //console.log('union ' + JSON.stringify(destinations.map((destination) => destination[4].index).sort()));
-
-        // TODO:perf надо накапдивать unions в дереве и дополнять их
-        // тогда все будет пучком ...
-        // TODO:perf другие типы заливок
-        // TODO:perf попробовать попарное объединение вместо массового
-        // TODO:perf попробовать последовательное отсечение вместо массового
-
-
-        //console.log('union' , union);
-        c.Clear();
-
-        var difference = new ClipperLib.Paths();
-        //console.log('subj' , subj);
-        c.AddPath(subj,  ClipperLib.PolyType.ptSubject, true);
-        c.AddPaths(union,  ClipperLib.PolyType.ptClip, true /* true ???? */);
-        //c.Execute(ClipperLib.ClipType.ctDifference, difference);
-        callDiff(c, difference);
-        //console.log('difference' , difference);
-
-        return difference.length == 0;
-    }
-
-    function callDiff(c, difference) {
-      return c.Execute(ClipperLib.ClipType.ctDifference, difference);
-    }
 
     function _isCovered(candidate, destination) {
         //console.log('_isCovered');

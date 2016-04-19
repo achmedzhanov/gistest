@@ -119,6 +119,41 @@
             ], result);
         });
 
+        it('Должен отфильтровать полигон, который накрывается целиком тремя непоследовательно пересекающимися полигонами (гео координаты)', function () {
+          var result = PolygonAlgs.filterCoveredPolygons([
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[1,1],[6,1],[6,3],[1,3],[1,1]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[2,0],[5,0],[5,5],[2,5],[2,0]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[4,0],[7,0],[7,5],[4,5],[4,0]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[0,0],[3,0],[3,5],[0,5],[0,0]]]}}
+            ]            );
+
+            // это костыль ... надо делать проверку, независимую от порядка, но в mocha этого нет из коробки ..
+            result.reverse()
+
+          assert.deepEqual([
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[2,0],[5,0],[5,5],[2,5],[2,0]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[4,0],[7,0],[7,5],[4,5],[4,0]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[0,0],[3,0],[3,5],[0,5],[0,0]]]}}
+            ], result);
+        });
+
+        it('Должен отфильтровать полигон, который накрывается сложными  полигонами (гео координаты)', function () {
+          var result = PolygonAlgs.filterCoveredPolygons([
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-43.946152,-72.285004],[-52.816589,-69.883179],[-46.2789,-67.088402],[-37.960777,-69.195351]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-42.157578,-68.373001],[-34.014065,-66.331345],[-32.010582,-67.366219],[-40.375908,-69.49884]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-15.967052,-72.742828],[-25.01753,-75.577591],[-30.723701,-78.652336],[-45.796516,-76.423859],[-46,-76],[-55.662262,-73.759247],[-59.102505,-72.434914],[-50.278103,-70.024223],[-46.278103,-71.1903],[-36.662262,-73.461143],[-27,-75],[-34.298782,-72.571625],[-40.375385,-69.499153],[-32.007812,-67.365837],[-25.298782,-70.136627]]]}},
+            {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[0,0],[3,0],[3,5],[0,5],[0,0]]]}}
+            ]            );
+
+            // это костыль ... надо делать проверку, независимую от порядка, но в mocha этого нет из коробки ..
+            //result.reverse()
+
+          // assert.deepEqual([
+          //   {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[2,0],[5,0],[5,5],[2,5],[2,0]]]}},
+          //   {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[4,0],[7,0],[7,5],[4,5],[4,0]]]}},
+          //   {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[0,0],[3,0],[3,5],[0,5],[0,0]]]}}
+          //   ], result);
+        });
 
       });
   });
