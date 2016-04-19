@@ -155,7 +155,8 @@ var PolygonAlgs = {};
         let result = new Array((coordinates[0][0] == coordinates[coordinates.length - 1][0] && coordinates[0][1] == coordinates[coordinates.length - 1][1]) ? coordinates.length - 1 : coordinates.length);
         let i = result.length;
         while (i--) {
-            result[i] = {
+          // если приобразовать к целому числу, то получим прирост около 20%
+          result[i] = {
                 X: coordinates[i][0] * 100 /* 65536 */ ,
                 Y: coordinates[i][1] * 100 /* 65536 */
             }
@@ -164,79 +165,18 @@ var PolygonAlgs = {};
     }
 
     function _isCoveredMulti(candidate, destinations) {
-        console.log('_isCoveredMulti');
-
-        // проверям попадают ли все вершины в множетство прямоугольников из пересечений
-
-        // let cc = candidate[4].feature.geometry.coordinates[0];
-        // let included = false;
-        // for(let i = 0; i < cc.length; i++) {
-        //   false;
-        //   for(let j = 0; j < destinations.length; j++) {
-        //     if(isPointInRect(cc[i][0], cc[i][1], destinations[j])) {
-        //       included = true;
-        //       break;
-        //     }
-        //   }
-        //   if(!included) {
-        //     //console.log('cc false');
-        //     return false;
-        //   }
-        // }
-
-      //   let subj = toClipperPath(candidate[4].feature.geometry.coordinates[0]);
-      //   // let filteredDestinations = [];
-      //   // let cc = candidate[4].feature.geometry.coordinates[0];
-      //   // let included = false;
-      //   // for(let j = 0; j < destinations.length; j++) {
-      //   //     included = false;
-      //   //     for(let i = 0; i < cc.length; i++) {
-      //   //         if(isPointInRect(cc[i][0], cc[i][1], destinations[j])) {
-      //   //           included = true;
-      //   //           break;
-      //   //         }
-      //   //     }
-      //   //     if(included) {
-      //   //         filteredDestinations.push(destinations[j]);
-      //   //     }
-      //   // }
-      //   //console.log('filteredDestinations ' + filteredDestinations.length + ' destinations ' + destinations.length);
-      //   //let clips = filteredDestinations.map((destination) => toClipperPath(destination[4].feature.geometry.coordinates[0]));
-      //   let clips = destinations.map((destination) => toClipperPath(destination[4].feature.geometry.coordinates[0]));
-      //   // if(clips.length > 50) {
-      //   //   return false;
-      //   // }
-       //
-      //   //console.log('call clipper ' + Math.round(clips.length / 100));
-      //   var p = performance.now();
-      //   var c = new ClipperLib.Clipper();
-       //
-      //   var difference = new ClipperLib.Paths();
-      //   //console.log('subj' , subj);
-      //   c.AddPath(subj, ClipperLib.PolyType.ptSubject, true);
-      //   c.AddPaths(clips, ClipperLib.PolyType.ptClip, true);
-      //   if (!c.Execute(ClipperLib.ClipType.ctIntersection, difference, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero)) {
-      //       console.log('Clipper Execute failed');
-      //       return false;
-      //   }
-       //
-      //   //console.log('clipper execution ' + (performance.now() - p));
-       //
-      //   //console.log('difference' , difference);
-       //
-      //  return difference.length == 0;
-
-
+        //console.log('_isCoveredMulti');
 
         let subj = toClipperPath(candidate[4].feature.geometry.coordinates[0]);
         let clips = destinations.map((destination) => toClipperPath(destination[4].feature.geometry.coordinates[0]));
         var union = new ClipperLib.Paths();
         var c = new ClipperLib.Clipper();
-        //  c.AddPath(clips[0],  ClipperLib.PolyType.ptSubject, true);
-        //  c.AddPath(clips[1],  ClipperLib.PolyType.ptClip, true);
+
         c.AddPath(clips[0],  ClipperLib.PolyType.ptSubject, true);
         c.AddPaths(clips.slice(1),  ClipperLib.PolyType.ptClip, true);
         c.Execute(ClipperLib.ClipType.ctUnion, union, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+
+        //console.log('union ' + JSON.stringify(destinations.map((destination) => destination[4].index).sort()));
 
         // TODO:perf надо накапдивать unions в дереве и дополнять их
         // тогда все будет пучком ...
@@ -244,9 +184,9 @@ var PolygonAlgs = {};
         // TODO:perf попробовать попарное объединение вместо массового
         // TODO:perf попробовать последовательное отсечение вместо массового
 
+
         //console.log('union' , union);
-        //c.Clear();
-        c = new ClipperLib.Clipper();
+        c.Clear();
 
         var difference = new ClipperLib.Paths();
         //console.log('subj' , subj);
