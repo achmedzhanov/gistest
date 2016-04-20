@@ -5,7 +5,7 @@ dist
 bower_components
 test/bower_components
 data
-
+profiles
 
 app/task1_example.geojson
 app/task1_example_small.geojson

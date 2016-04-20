@@ -116,6 +116,21 @@ var PolygonAlgs = {};
 
     const clipperFactor = 1;
 
+    function diff1(c, d) {
+      c.Execute(ClipperLib.ClipType.ctDifference, d, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+    }
+    function diff2(c, d) {
+      c.Execute(ClipperLib.ClipType.ctDifference, d, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+    }
+    function diff2(c, d) {
+      c.Execute(ClipperLib.ClipType.ctDifference, d, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+    }
+    function union1(c, d) {
+      c.Execute(ClipperLib.ClipType.ctUnion, d, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+    }
+
+
+
     function filterCoveredPolygons(features) {
         // для начала простой алгоритм
         // проверям накрывание только одним полигоном
@@ -155,6 +170,7 @@ var PolygonAlgs = {};
             intersected = tree.search(current);
             //console.log('intersected.length ' + intersected.length);
             filteredIntersected = [];
+            let currentDifference = [current[4].clipperPath];
             for (j = 0; j < intersected.length; j++) {
                 if (intersected[j][4].index <= current[4].index ||
                     intersected[j][4].covered) {
@@ -166,14 +182,17 @@ var PolygonAlgs = {};
                 let currentIntersected = intersected[j][4];
                 let difference = new ClipperLib.Paths();
                 clipper.Clear();
-                clipper.AddPath(current[4].clipperPath,  ClipperLib.PolyType.ptSubject, true);
+                clipper.AddPaths(currentDifference,  ClipperLib.PolyType.ptSubject, true);
                 clipper.AddPath(currentIntersected.clipperPath,  ClipperLib.PolyType.ptClip, true);
                 clipper.Execute(ClipperLib.ClipType.ctDifference, difference, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+                //diff1(clipper,difference);
+                //console.log('* diff 1');
                 //console.log('difference', difference);
 
                 // если накрывает целиком, то останавливаем цикл
                 if(difference.length == 0) {
-                  //-console.log('full covered break * feature:' + currentIntersected.feature);
+                  //console.log('full covered break * feature:' + currentIntersected.feature);
+                  //console.log('full covered ' + filteredIntersected.length);
                   covered = true;
                   break;
                 }
@@ -181,67 +200,17 @@ var PolygonAlgs = {};
                 //console.log('candidate[4].clipperPath', candidate[4].clipperPath);
 
                 // если не накрывает, но пересекает, то добааляем в список на объединение
-                if(!isEqualPaths(difference, [candidate[4].clipperPath])) {
+                if(!isEqualPaths(difference, [currentDifference])) {
                   //-console.log('partialy covered');
                   filteredIntersected.push(intersected[j]);
                 } else {
                   //-console.log('not intersected');
                 }
-            }
-
-            // если есть перечения
-            if(!covered &&  filteredIntersected.length > 0 ) {
-                // если больше 1, то проверим покрытие через объединение
-                clipper.Clear();
-                clipper.AddPath(current[4].clipperPath,  ClipperLib.PolyType.ptSubject, true);
-                clipper.AddPaths(filteredIntersected.map((v) => v[4].clipperPath),  ClipperLib.PolyType.ptClip, true);
-                let difference = new ClipperLib.Paths();
-                clipper.Execute(ClipperLib.ClipType.ctDifference, difference, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-                // если накрыто то устанавливаем флаг
-                if(difference.length == 0) {
-                  //-console.log('union covered break * ' + filteredIntersected.length);
-                  covered = true;
-                } else {
-                    // иначе делаем объединение и перестраиваем дерево
-                    //-console.log('change tree *');
-                    //-console.log('tree size ' + tree.all().length);
-                    let union = new ClipperLib.Paths();
-                    clipper.Execute(ClipperLib.ClipType.ctUnion, union, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-                    if(union.length == 1) {
-                        // удаляем полигоны входящие в объединение ...
-                        tree.remove(current);
-                        for(let k = 0; k < filteredIntersected.length; k++) {
-                            tree.remove(filteredIntersected[k]);
-                        }
-
-                        //-console.log('union attached ' + filteredIntersected.length + ' ' + filteredIntersected.length);
-
-                        if(ClipperLib.Clipper.Orientation(union[0])) {
-                            //-console.log('reverse path');
-                            union[0].reverse();
-                        }
-
-                        // вставляем объединение
-                        let newItem = getBoundingBoxArrayFromClipperPath(union[0]);
-                        newItem.push({
-                            feature: null,
-                            cArray: undefined,
-                            isConvex: false,
-                            covered: false,
-                            index: current[4].index,
-                            clipperPath: union[0]
-                        });
-                        tree.insert(newItem);
-                        //-console.log('tree size ' + tree.all().length);
-                    } else {
-                        console.log('объединение пересекающихся полигонов дало несколько контуров ..' /*, union*/);
-                        console.log('subj', JSON.stringify(pathToGeo(current[4].clipperPath)));
-                        console.log('clip', JSON.stringify(pathToGeo(filteredIntersected.map((v) => v[4].clipperPath))));
-                        console.log('filteredIntersected ' + filteredIntersected.length)
-                        //console.log('union', JSON.stringify(pathToGeo(union)));
-                        console.log('union length', union.length);
-                        //console.log('difference', JSON.stringify(pathToGeo(difference)));
-                    }
+                currentDifference = difference;
+                if(ClipperLib.Clipper.Orientation(currentDifference)) {
+                    //console.log('reverse diff path');
+                    ClipperLib.Clipper.ReversePaths(currentDifference);
+                    //currentDifference.reverse();
                 }
             }
 
