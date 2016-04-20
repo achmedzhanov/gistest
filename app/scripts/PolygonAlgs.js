@@ -116,21 +116,6 @@ var PolygonAlgs = {};
 
     const clipperFactor = 1;
 
-    function diff1(c, d) {
-      c.Execute(ClipperLib.ClipType.ctDifference, d, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-    }
-    function diff2(c, d) {
-      c.Execute(ClipperLib.ClipType.ctDifference, d, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-    }
-    function diff2(c, d) {
-      c.Execute(ClipperLib.ClipType.ctDifference, d, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-    }
-    function union1(c, d) {
-      c.Execute(ClipperLib.ClipType.ctUnion, d, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-    }
-
-
-
     function filterCoveredPolygons(features) {
         // для начала простой алгоритм
         // проверям накрывание только одним полигоном
@@ -184,7 +169,7 @@ var PolygonAlgs = {};
                 clipper.Clear();
                 clipper.AddPaths(currentDifference,  ClipperLib.PolyType.ptSubject, true);
                 clipper.AddPath(currentIntersected.clipperPath,  ClipperLib.PolyType.ptClip, true);
-                clipper.Execute(ClipperLib.ClipType.ctDifference, difference, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+                clipper.Execute(ClipperLib.ClipType.ctDifference, difference /*, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero*/);
                 //diff1(clipper,difference);
                 //console.log('* diff 1');
                 //console.log('difference', difference);
@@ -236,7 +221,8 @@ var PolygonAlgs = {};
         let result = new Array((coordinates[0][0] == coordinates[coordinates.length - 1][0] && coordinates[0][1] == coordinates[coordinates.length - 1][1]) ? coordinates.length - 1 : coordinates.length);
         let i = result.length;
         while (i--) {
-          // если приобразовать к целому числу, то получим прирост около 20%
+          // если умножать координаты, то фильтруется меньше полигонов и дольше
+          // почему непонятно ...
           result[i] = {
                 X: coordinates[i][0] * clipperFactor /* 65536 */ ,
                 Y: coordinates[i][1] * clipperFactor /* 65536 */
