@@ -156,6 +156,22 @@ var PolygonAlgs = {};
             //console.log('intersected.length ' + intersected.length);
             filteredIntersected = [];
             let currentDifference = [current[4].clipperPath];
+
+            // {
+            //     let difference = new ClipperLib.Paths();
+            //     clipper.Clear();
+            //     clipper.AddPath(current[4].clipperPath,  ClipperLib.PolyType.ptSubject, true);
+            //     let ip = intersected.filter((v) => (
+            //       (v[4].index > current[4].index && !v[4].covered )))
+            //           .map((v) => v[4].clipperPath);
+            //     //console.log('ip', ip);
+            //     clipper.AddPaths(ip,  ClipperLib.PolyType.ptClip, true);
+            //     clipper.Execute(ClipperLib.ClipType.ctDifference, difference , ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+            //     if(difference.length == 0) {
+            //       covered = true;
+            //     }
+            // }
+
             for (j = 0; j < intersected.length; j++) {
                 if (intersected[j][4].index <= current[4].index ||
                     intersected[j][4].covered) {
@@ -178,6 +194,12 @@ var PolygonAlgs = {};
                 if(difference.length == 0) {
                   //console.log('full covered break * feature:' + currentIntersected.feature);
                   //console.log('full covered ' + filteredIntersected.length);
+                  // if(filteredIntersected.length > 0) {
+                  //     //console.log('full cover m');
+                  // } else {
+                  //     //console.log('full cover s');
+                  // }
+
                   covered = true;
                   break;
                 }
