@@ -53,3 +53,9 @@ html, body {
     height: 400px;
   }
 }
+
+.input-filter {
+    &_enabled {
+        background-color: #ffeba0;
+    }
+}

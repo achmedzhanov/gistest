@@ -13,26 +13,41 @@
 
 
     // растягиваем карту на размер окна
-    $(window).on('resize', function() {
+    $(window).on('resize', () => {
         $('#map').height($('body').height()).width($('body').width());
         map.invalidateSize();
     }).trigger('resize');
 
+	let state = {
+		filterEnabled: false,
+		data: null,
+		filteredData: null
+	}
+
+	// включить/отключить фильтрацию
+	$(() => {
+		$('.input-filter').click(() => {
+			state.filterEnabled = ! state.filterEnabled;
+			$('.input-filter').toggleClass('input-filter_enabled', state.filterEnabled);
+
+			showJsonOnMap(getDataForMap());
+		});
+	})
+
+	// $(() => {
+	// 	// загрузка файла
+	//
+	// });
+
     // ручноЙ ввод JSON
-    $(function() {
+    $(() => {
         $('.input-json').magnificPopup({
             type: 'inline',
             preloader: false,
-            focus: '.input-json-form__jeojson',
-
-            callbacks: {
-                beforeOpen: function() {
-                    // TODO put last value
-                }
-            }
+            focus: '.input-json-form__jeojson'
         });
 
-        $('.input-json-form__ok').click(function() {
+        $('.input-json-form__ok').click(() => {
             let text = $('.input-json-form__jeojson').val();
             let data;
             try {
@@ -46,12 +61,35 @@
             $.magnificPopup.instance.close();
 
             // показвываем данные на карте
-            showJson(data);
+            loadData(data);
             return false;
         });
     });
 
-    function showJson(data) {
+	function getDataForMap() {
+		if(state.data != null) {
+			 if(state.filterEnabled) {
+				 if(state.filteredData == null) {
+					 let start = performance.now();
+					 state.filteredData = PolygonAlgs.filterCoveredPolygons(state.data.features);
+					 let time = (performance.now() - start);
+					 console.log(`Время фильтрации ${time}ms`);
+				 }
+				 return state.filteredData;
+			 } else {
+				 return state.data;
+			 }
+		}
+		return null;
+	}
+
+	function loadData(data) {
+		state.data = data;
+		state.filteredData = null;
+		showJsonOnMap(getDataForMap());
+	}
+
+    function showJsonOnMap(data) {
         // очистить слои
         for (i in map._layers) {
             if (map._layers[i]._path != undefined) {
@@ -63,7 +101,9 @@
             }
         }
         // добавить полигоны на карту
-        L.geoJson(data).addTo(map); // работает на удивление довольно быстро ...
+		if(data) {
+			L.geoJson(data).addTo(map); // работает на удивление довольно быстро ...
+		}
     }
 
 	// для удобства отладки
@@ -76,17 +116,12 @@
 		console.log('Загружаем файл', fileUrl);
 		$.getJSON(fileUrl )
 	        .then((data) => {
-	            console.log('Получены данные');
-	            let start = performance.now();
-	            let filteredData = PolygonAlgs.filterCoveredPolygons(data.features);
-				let time = (performance.now() - start);
-				console.log(`Время фильтрации ${time}ms`);
-	            showJson(filteredData);
+				console.log('Получены данные');
+	            loadData(data);
 	        })
 	        .fail((e) => {
 	            console.log(`Ошибка загрузки файла ${fileUrl}`, e);
 	        });
 	}
-
 
 })(L, $, PolygonAlgs, console);
