@@ -32,13 +32,12 @@
 
 	// загрузка файла
 	$(() => {
-		$('.input-file').click(() => {
+		$('.input-file').click(function () => {
 			$('#input-file').click();
 		});
 		$('#input-file').change((evt) => {
 			readFile(evt.target.files[0]);
 		});
-
 
 		window.addEventListener("dragover",function(e){
 		  e = e || event;

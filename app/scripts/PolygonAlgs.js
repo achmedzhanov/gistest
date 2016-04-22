@@ -159,7 +159,6 @@ var PolygonAlgs = {};
             let currentDifference = [current[4].clipperPath];
 
             for (j = 0; j < intersected.length; j++) {
-
                 if (intersected[j][4].index <= current[4].index ||
                     intersected[j][4].covered) {
                     continue;
@@ -174,6 +173,7 @@ var PolygonAlgs = {};
                 clipper.Execute(ClipperLib.ClipType.ctDifference, difference /*, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero*/);
                 //console.log('* diff 1');
                 //console.log('difference', difference);
+
 
                 // если накрывает целиком, то останавливаем цикл
                 if(difference.length == 0) {
