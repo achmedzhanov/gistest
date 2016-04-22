@@ -35,11 +35,27 @@
 		$('.input-file').click(() => {
 			$('#input-file').click();
 		});
+		$('#input-file').change((evt) => {
+			readFile(evt.target.files[0]);
+		});
 
-		$('#input-file').change(handleFileSelect);
 
-		function handleFileSelect(evt) {
-			var f = evt.target.files[0];
+		window.addEventListener("dragover",function(e){
+		  e = e || event;
+		  e.preventDefault();
+		},false);
+		window.addEventListener("drop",function(e){
+		  e = e || event;
+		  e.preventDefault();
+		},false);
+
+		$("html").on("drop", function(evt) {
+		    evt.preventDefault();
+		    evt.stopPropagation();
+			readFile(evt.originalEvent.dataTransfer.files[0]);
+		});
+
+		function readFile(f) {
 			var reader = new FileReader();
 			reader.onload = function(event) {
 				let data;
@@ -53,6 +69,10 @@
 	            loadData(data);
 			};
 			reader.readAsText(f);
+		}
+
+		function handleFileSelect(evt) {
+			readFile(evt.target.files[0]);
 		}
 	});
 
