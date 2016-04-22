@@ -1,6 +1,7 @@
 (function(L, $, PolygonAlgs, console) {
     "use strict";
 
+
     var map = L.map('map').setView([39.74739, -105], 3);
 
     L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpandmbXliNDBjZWd2M2x6bDk3c2ZtOTkifQ._QA7i5Mpkd_m30IGElHziw', {
@@ -18,26 +19,42 @@
         map.invalidateSize();
     }).trigger('resize');
 
-	let state = {
-		filterEnabled: false,
-		data: null,
-		filteredData: null
-	}
 
 	// включить/отключить фильтрацию
 	$(() => {
 		$('.input-filter').click(() => {
-			state.filterEnabled = ! state.filterEnabled;
-			$('.input-filter').toggleClass('input-filter_enabled', state.filterEnabled);
-
-			showJsonOnMap(getDataForMap());
+			let enabled = $('.input-filter')
+				.toggleClass('input-filter_enabled')
+				.hasClass('input-filter_enabled');
+			enableFilter(enabled);
 		});
 	})
 
-	// $(() => {
-	// 	// загрузка файла
-	//
-	// });
+	// загрузка файла
+	$(() => {
+		$('.input-file').click(() => {
+			$('#input-file').click();
+		});
+
+		$('#input-file').change(handleFileSelect);
+
+		function handleFileSelect(evt) {
+			var f = evt.target.files[0];
+			var reader = new FileReader();
+			reader.onload = function(event) {
+				let data;
+				try {
+	                data = JSON.parse(event.target.result);
+	            } catch (e) {
+	                alert('Неверный формат JSON. Ошибки: ' + e);
+	                return false;
+	            }
+	            // показвываем данные на карте
+	            loadData(data);
+			};
+			reader.readAsText(f);
+		}
+	});
 
     // ручноЙ ввод JSON
     $(() => {
@@ -65,6 +82,36 @@
             return false;
         });
     });
+
+	// для удобства отладки
+	// если в query string указан URL файла, то сразу загружаем его
+	// примеры
+	//	file=/task1_example.geojson
+	//	file=/task1_example_small.geojson
+	let fileUrl = $.url(window.location.href).param('file');
+	if(fileUrl) {
+		console.log('Загружаем файл', fileUrl);
+		$.getJSON(fileUrl )
+	        .then((data) => {
+				console.log('Получены данные');
+	            loadData(data);
+	        })
+	        .fail((e) => {
+	            console.log(`Ошибка загрузки файла ${fileUrl}`, e);
+	        });
+	}
+
+
+	let state = {
+		filterEnabled: false,
+		data: null,
+		filteredData: null
+	}
+
+	function enableFilter(enabled) {
+		state.filterEnabled = enabled;
+		showJsonOnMap(getDataForMap());
+	}
 
 	function getDataForMap() {
 		if(state.data != null) {
@@ -105,23 +152,5 @@
 			L.geoJson(data).addTo(map); // работает на удивление довольно быстро ...
 		}
     }
-
-	// для удобства отладки
-	// если в query string указан URL файла, то сразу загружаем его
-	// примеры
-	//	file=/task1_example.geojson
-	//	file=/task1_example_small.geojson
-	let fileUrl = $.url(window.location.href).param('file');
-	if(fileUrl) {
-		console.log('Загружаем файл', fileUrl);
-		$.getJSON(fileUrl )
-	        .then((data) => {
-				console.log('Получены данные');
-	            loadData(data);
-	        })
-	        .fail((e) => {
-	            console.log(`Ошибка загрузки файла ${fileUrl}`, e);
-	        });
-	}
 
 })(L, $, PolygonAlgs, console);
