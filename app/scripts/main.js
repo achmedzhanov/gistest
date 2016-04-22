@@ -118,7 +118,8 @@
 			 if(state.filterEnabled) {
 				 if(state.filteredData == null) {
 					 let start = performance.now();
-					 state.filteredData = PolygonAlgs.filterCoveredPolygons(state.data.features);
+					 let dataForFiltering = Array.isArray(state.data.features) ?  state.data.features : state.data;
+					 state.filteredData = PolygonAlgs.filterCoveredPolygons(dataForFiltering);
 					 let time = (performance.now() - start);
 					 console.log(`Время фильтрации ${time}ms`);
 				 }

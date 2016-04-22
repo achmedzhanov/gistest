@@ -114,18 +114,20 @@ var PolygonAlgs = {};
       return true;
     }
 
-    const clipperFactor = 1;
+    // множитель задает точность вычислений перекрытий полигонов
+    // 1 - 0 знаков после запятой
+    // 10 -1 знак после запятой
+    // 100 - 2 знака после запятой
+    const clipperFactor = 10;
 
     function filterCoveredPolygons(features) {
-        // для начала простой алгоритм
-        // проверям накрывание только одним полигоном
-        // посколькку полигоны выпуклые, то чтобы проверить вхождение A в B досаточно проверить что все точки A находятся внутри полигона B
-
-        // идем в обратном порядке
-        // пвый полигон виден всегда
-        // второй может перекрываться первым и т.д.
-
-        // TODO:perf огрубить точность 3 знака после запятой!
+        // алгоритм вычисления
+        // 1. Для каждого полиговы вычисляется обрамляющий прямоугольник
+        // 2. По прямоугольникам строим пространственный индекс
+        // 3. Для каждого тполигона:
+        // 3.1 Через пространственный индекс находим список полиговнов, с которыми данный полигон может пересекаться
+        // 3.2 Из списка удалем те, которые ужгое невилимы и которые рисуются после данного полигона
+        // 3.3 Последовательно вычитаем из данного полигона полингоы из спеска, если результат вычитания пустой считаем чтоданный  поллигон невилим
 
         let ractangles = features.map((f, i) => {
             var a = getBoundingBoxArray(features[i].geometry.coordinates[0]);
@@ -140,43 +142,27 @@ var PolygonAlgs = {};
             return a;
         });
 
-
+        // строим пространственный индекс
         let tree = rbush(4);
         tree.load(ractangles);
 
         let filtered = [];
         let current, intersected, j, covered, filteredIntersected;
-
-        //let subj = null, clips = null, union = null, clipper = new ClipperLib.Clipper();
         let clipper = new ClipperLib.Clipper();
         for (let i = ractangles.length - 1; i >= 0; i--) {
             current = ractangles[i];
             covered = false;
+            // поиск в пространственном индексе
             intersected = tree.search(current);
             //console.log('intersected.length ' + intersected.length);
             filteredIntersected = [];
             let currentDifference = [current[4].clipperPath];
 
-            // {
-            //     let difference = new ClipperLib.Paths();
-            //     clipper.Clear();
-            //     clipper.AddPath(current[4].clipperPath,  ClipperLib.PolyType.ptSubject, true);
-            //     let ip = intersected.filter((v) => (
-            //       (v[4].index > current[4].index && !v[4].covered )))
-            //           .map((v) => v[4].clipperPath);
-            //     //console.log('ip', ip);
-            //     clipper.AddPaths(ip,  ClipperLib.PolyType.ptClip, true);
-            //     clipper.Execute(ClipperLib.ClipType.ctDifference, difference , ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-            //     if(difference.length == 0) {
-            //       covered = true;
-            //     }
-            // }
-
             for (j = 0; j < intersected.length; j++) {
+
                 if (intersected[j][4].index <= current[4].index ||
                     intersected[j][4].covered) {
                     continue;
-                    //console.log('index continue');
                 }
 
                 let candidate = current;
@@ -186,34 +172,20 @@ var PolygonAlgs = {};
                 clipper.AddPaths(currentDifference,  ClipperLib.PolyType.ptSubject, true);
                 clipper.AddPath(currentIntersected.clipperPath,  ClipperLib.PolyType.ptClip, true);
                 clipper.Execute(ClipperLib.ClipType.ctDifference, difference /*, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero*/);
-                //diff1(clipper,difference);
                 //console.log('* diff 1');
                 //console.log('difference', difference);
 
                 // если накрывает целиком, то останавливаем цикл
                 if(difference.length == 0) {
-                  //console.log('full covered break * feature:' + currentIntersected.feature);
-                  //console.log('full covered ' + filteredIntersected.length);
-                  // if(filteredIntersected.length > 0) {
-                  //     //console.log('full cover m');
-                  // } else {
-                  //     //console.log('full cover s');
-                  // }
-
+                  //console.log('* difference=0');
                   covered = true;
                   break;
                 }
-                //console.log('intersection[0]', difference[0]);
-                //console.log('candidate[4].clipperPath', candidate[4].clipperPath);
 
-                // если не накрывает, но пересекает, то добааляем в список на объединение
-                if(!isEqualPaths(difference, [currentDifference])) {
-                  //-console.log('partialy covered');
-                  filteredIntersected.push(intersected[j]);
-                } else {
-                  //-console.log('not intersected');
-                }
                 currentDifference = difference;
+
+                // ориентация результат вычитания может быть другой
+                // поэтому приводим ее к общей
                 if(ClipperLib.Clipper.Orientation(currentDifference)) {
                     //console.log('reverse diff path');
                     ClipperLib.Clipper.ReversePaths(currentDifference);
@@ -227,7 +199,8 @@ var PolygonAlgs = {};
                 current.covered = true;
             }
         }
-        console.log('data.length=' + features.length + ' filtered.length=' + filtered.length)
+
+        console.log(`filterCoveredPolygons: Количество полигонов ${features.length}, видимые  ${filtered.length}`);
         return filtered.map(v => v.feature);
     }
 
