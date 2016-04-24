@@ -114,8 +114,6 @@ var PolygonAlgs = {};
         let result = new Array((coordinates[0][0] == coordinates[coordinates.length - 1][0] && coordinates[0][1] == coordinates[coordinates.length - 1][1]) ? coordinates.length - 1 : coordinates.length);
         let i = result.length;
         while (i--) {
-          // если умножать координаты, то фильтруется меньше полигонов и дольше
-          // почему непонятно ...
           result[i] = {
                 X: coordinates[i][0] * clipperFactor /* 65536 */ ,
                 Y: coordinates[i][1] * clipperFactor /* 65536 */
