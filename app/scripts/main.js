@@ -32,7 +32,7 @@
 
 	// загрузка файла
 	$(() => {
-		$('.input-file').click(function () => {
+		$('.input-file').click(() => {
 			$('#input-file').click();
 		});
 		$('#input-file').change((evt) => {
